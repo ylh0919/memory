@@ -1,2 +1,338 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+#pragma once
+
+namespace ylh
+{
+	//宏定义,抛出异常
+#if 0
+#include<new>
+#define __THROW_BAD_ALLOC throw std::bad_alloc
+#elif !defined(__THROW_BAD_ALLOC)
+#include<iostream>
+#define __THROW_BAD_ALLOC std::cerr<<"out of memory"<<std::endl;exit(1)
+#endif
+
+//非类型模板
+	template<int inst>
+	class __malloc_alloc_template
+	{
+	private:
+		static void* oom_malloc(size_t n)
+		{
+			void* result = nullptr;
+			void (*my_malloc_headler)() = nullptr;
+			for (;;)
+			{
+				my_malloc_headler = __malloc_alloc_oom_headler;
+				if (my_malloc_headler == nullptr)
+				{
+					__THROW_BAD_ALLOC;
+				}
+				(*my_malloc_headler)();//回调函数，1：释放更多空间。2：指明新的释放函数。3：没有释放函数，要指明一个函数结束程序。
+				result = malloc(n);
+				if (result != nullptr)
+				{
+					return result;
+				}
+			}
+		}
+		static void* oom_realloc(void* p, size_t new_sz)
+		{
+			void* result = nullptr;
+			void (*my_malloc_headler)() = nullptr;
+			for (;;)
+			{
+				my_malloc_headler = __malloc_alloc_oom_headler;
+				if (my_malloc_headler == nullptr)
+				{
+					__THROW_BAD_ALLOC;
+				}
+				(*my_malloc_headler)();//回调函数，1：释放更多空间。2：指明新的释放函数。3：没有释放函数，要指明一个函数结束程序。
+				result = realloc(p,new_sz);
+				if (result != nullptr)
+				{
+					return result;
+				}
+			}
+		}
+		static void(*__malloc_alloc_oom_headler)();
+		typedef void (*OOM_Headler)();
+	public:
+		static void* allocate(size_t n)
+		{
+			void* result = malloc(n);
+			if (result == nullptr)
+			{
+				result = oom_malloc(n);
+			}
+			return result;
+		}
+		static void deallocate(void* p, size_t n)
+		{
+			free(p);
+		}
+		static void* reallocate(void* p, size_t old_sz, size_t new_sz)
+		{
+			void* result = realloc(p, new_sz);
+			if (result == nullptr)
+			{
+				result = oom_realloc(p, new_sz);
+			}
+			return result;
+		}
+		//static void(*__malloc_alloc_oom_headler(void(*f))();
+		static OOM_Headler set_malloc_headler(OOM_Headler f)
+		{
+			OOM_Headler old = __malloc_alloc_oom_headler;
+			__malloc_alloc_oom_headler = f;
+			return old;
+		}
+	};
+
+	template<int inst>
+	void (* __malloc_alloc_template<inst>::__malloc_alloc_oom_headler)() = nullptr;
+
+	typedef __malloc_alloc_template<0> malloc_alloc;
+
+///////////////////////////////////////////////////////////
+
+
+enum { __ALIGN = 8 };
+enum{__MAX_BYTES = 128};
+enum{__NFREELISTS = __MAX_BYTES / __ALIGN};
+
+template<bool threads,int inst>
+class __default_alloc_template
+{
+private:
+	//联合体：联合(union)是一种特殊的类。
+	//一个union对象可以有多个数据成员，但是任何时刻，只有一个成员可以有值。
+	//当将一个值赋给union对象的一个成员的时候，其他所有成员都变为未定义的。
+	union obj
+	{
+		union obj* free_list_link;//内存块指向下一内存块的节点，占4字节，连成自由链
+		char client_data[1];//没有实际影响，让使用者清楚有数据域
+	};
+private:
+	static obj* volatile free_list[__NFREELISTS];//自由数组0-128
+	static char* start_free;//池子的开始
+	static char* end_free;//池子的结尾
+	static size_t heap_size;//总共从堆区获取的大小
+
+	static size_t FREELIST_INDEX(size_t bytes)
+	{
+		return(bytes + __ALIGN - 1) / __ALIGN - 1;
+		//返回的是字节的下标值，例如：1，2，3取0号下标
+		//9，10，11取1号下标，八个字节为一组
+	}
+	static size_t ROUND_UP(size_t bytes)
+	{
+		return (bytes + __ALIGN - 1) & ~(__ALIGN - 1);
+	//返回的是字节的大小，8、16、24........
+		//7是111，取反是000，前面补111...。将这个二进制数和前面的数进行按位与操作
+	}
+	//往池子注入空间
+	static char* chunk_alloc(size_t size, int& nobjs)
+	{
+		char* result = nullptr;
+		//需要的总的字节大小
+		size_t total_bytes = size * nobjs;
+		//池子剩余的字节大小
+		size_t bytes_left = end_free - start_free;
+		if (bytes_left >= total_bytes)
+		{
+		//池子的大小足够需要的
+			result = start_free;
+			start_free = start_free + total_bytes;
+			return result;
+		}
+		else if (bytes_left >= size)
+		{//池子剩余的不能满足需要的，但是够其中一部分
+			nobjs = bytes_left / size;//剩余的块数
+			total_bytes = size * nobjs;
+			result = start_free;
+			start_free = start_free + total_bytes;
+			return result;
+		}
+		else
+		{//池子可能没有，也可能有，但不足一块
+			size_t bytes_to_get = total_bytes * 2 + ROUND_UP(heap_size >> 4);//需要开辟的内存大小
+			if (bytes_left > 0)
+			{//池子里还有的情况
+				obj* volatile* my_free_list = free_list + FREELIST_INDEX(bytes_left);
+				((obj*)start_free)->free_list_link = *my_free_list;
+				*my_free_list = (obj*)start_free;
+				//将剩余部分给到对应字节下标的自由链下，因为有上越界和下越界，不可拿来使用
+			}
+			start_free = end_free = nullptr;
+			start_free = (char*)malloc(bytes_to_get);//开辟内存
+			if (start_free == nullptr)
+			{//开辟失败情况
+				obj* volatile* my_free_list = nullptr;
+				for (int i = size; i <= __MAX_BYTES; i += __ALIGN)
+				{//去每一个字节下标下去寻找可以使用的自由链
+					my_free_list = free_list + FREELIST_INDEX(i);
+					obj* p = *my_free_list;
+					if (p != nullptr)
+					{//找到可使用的情况
+						*my_free_list = p->free_list_link;
+						start_free = (char*)p;
+						end_free = start_free + i;
+						return chunk_alloc(size, nobjs);//注入其中，调用递归将他分离出来
+					}
+				}//未找到可使用的，也就是说整个池子和字节下标对应的自由链都已经空了
+				//这个时候调用一级配置器，寄希望于用户事先使用了内存，可以将其释放拿来使用
+				start_free = (char*)malloc_alloc::allocate(bytes_to_get);
+				//这个时候如果申请失败了，那一级配置器就会调用异常处理了
+			}
+			//将池子的尾指针移到申请的内存之后
+			end_free = start_free + bytes_to_get;
+			heap_size += bytes_to_get;
+			return chunk_alloc(size, nobjs);//调用递归将所需要的内存分离出来
+		}
+	}
+	//将从池子拿出来的内存链成自由链以供使用
+	static void* refill(size_t n)
+	{
+		int nobjs = 20;//SGI中规定为20块
+		char* chunk = chunk_alloc(n, nobjs);//进行填充
+		if (nobjs == 1)
+		{
+			return chunk;
+		}
+		obj* volatile* my_free_list = nullptr;//指向自由链的指针
+		obj* result = (obj*)chunk;//指向开辟的内存
+		obj* current_obj = nullptr;
+		obj* next_obj = nullptr;
+		//用于链接内存的指针，前后指针同时使用
+		int i = 0;
+		my_free_list = free_list + FREELIST_INDEX(n);//指向对应字节下标
+		*my_free_list = next_obj = (obj*)(chunk + n);
+		for (i = 1;; ++i)
+		{
+			current_obj = next_obj;
+			next_obj = (obj*)((char*)next_obj + n);//每次向后移动对应字节大小
+			if (i == nobjs - 1)
+			{
+				current_obj->free_list_link = nullptr;
+				break;
+			}
+			current_obj->free_list_link = next_obj;
+		}
+		return result;
+	}
+
+public:
+	static void* allocate(size_t n)
+	{
+		//大于128字节则找一级配置器
+		if (n > (size_t)__MAX_BYTES)
+		{
+			return malloc_alloc::allocate(n);
+		}
+		obj* volatile* my_free_list = nullptr;
+		obj* result = nullptr;
+		my_free_list = free_list + FREELIST_INDEX(n);
+		//指向需要分配字节的下标
+		result = *my_free_list;
+		//指向为空则说明该位置还没有分配空间或者已经使用
+		//则需要调动函数从池子中拿出内存连成自由链
+		if (result == nullptr)
+		{
+			void* r = refill(ROUND_UP(n));
+			return r;
+		}
+
+		/*int index = FREELIST_INDEX(n);
+		result = free_list[index];
+		if (nullptr == result)
+		{
+		}
+		free_list[index] = result->free_link_list;*/
+		//如果有内存则进行头删
+		*my_free_list = result->free_list_link;//next
+		return result;
+	}
+
+	static void deallocate(void* p, size_t n)
+	{
+		if (n > (size_t)__MAX_BYTES)
+		{
+			return malloc_alloc::deallocate(p,n);
+		}
+		obj* q = (obj*)p;
+		//把取出来的内存再放到自由链中
+		obj* volatile* my_free_list = free_list + FREELIST_INDEX(n);
+		q->free_list_link = *my_free_list;
+		*my_free_list = q;
+		return;
+	}
+
+	static void* reallocate(void* p, size_t old_sz, size_t new_sz)
+	{
+		if (old_sz > __MAX_BYTES && new_sz > __MAX_BYTES)
+		{
+			return malloc_alloc::reallocate(p, old_sz, new_sz);
+		}
+		//原字节下标域和新的一样就不用重新开辟
+		if (ROUND_UP(old_sz) == ROUND_UP(new_sz))
+		{
+			return p;
+		}
+		//将原内存中sz字节大小移入新的里面，相对小的字节大小，在销毁原来的
+		size_t sz = old_sz < new_sz ? old_sz : new_sz;
+		void* s = allocate(new_sz);
+		remove(s, p, sz);
+		deallocate(p, old_sz);
+		return s;
+	}
+};
+template<bool threads,int inst>
+//typename为了让编译器知道这不是静态成员
+typename __default_alloc_template<threads, inst>::obj* volatile
+__default_alloc_template<threads, inst>::free_list[__NFREELISTS] = {};
+
+template<bool threads, int inst>
+char* __default_alloc_template<threads, inst>::start_free = nullptr;
+
+template<bool threads, int inst>
+char* __default_alloc_template<threads, inst>::end_free = nullptr;
+
+
+template<bool threads, int inst>
+size_t __default_alloc_template<threads, inst>::heap_size = 0;
+
+#ifdef __USE_MALLOC
+typedef __malloc_alloc_template<0>  malloc_alloc;
+typedef malloc_alloc alloc;
+#else
+typedef __default_alloc_template<1, 0> alloc;
+#endif
+
+
+template<class T,class Alloc>
+class simple_alloc
+{
+public:
+	static T* allocate(size_t n)
+	{
+		return (T*)Alloc::allocate(sizeof(T) * n);
+	}
+	static T* allocate()
+	{
+		return (T*)Alloc::allocate(sizeof(T));
+	}
+	static void deallocate(T* p, size_t n)
+	{
+		if (nullptr == p)return;
+		Alloc::deallocate(p, sizeof(T) * n);
+	}
+	static void deallocate(T* p)
+	{
+		if (p == nullptr) return;
+		Alloc::deallocate(p, sizeof(T));
+	}
+};
+
+}
