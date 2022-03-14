@@ -1,0 +1,76 @@
+{
+	"balance_check_freq_ms":10000,
+	"batch_vol": {"xrp": 75},
+	"exchange":[
+			{
+				"exchange_name":"Kucoin",
+				"source": 32,
+				"account_list":[
+					{
+						"account_type":"master-main" ,
+						"account_name": "master-main"
+					},
+					{
+						"account_type":"master-trade" ,
+						"account_name": "master-trade"
+					},
+					{
+						"account_type":"sub-main" ,
+						"account_name": "Sinodanish2-main"
+					},
+					{
+						"account_type":"sub-trade" ,
+						"account_name": "Sinodanish2-trade"
+					},
+					{
+						"account_type":"sub-main" ,
+						"account_name": "Sinodanish3-main"
+					},
+					{
+						"account_type":"sub-trade" ,
+						"account_name": "Sinodanish3-trade"
+					}
+				],
+				"default_account": {
+					"xrp": "master-trade"
+				},
+				"threshold": {"xrp": 300},
+				"participating": 1
+			},
+			{
+				"exchange_name":"Binance",
+				"source": 16,
+				"account_list":[
+					{
+						"account_type":"master-main" ,
+						"account_name": "master-main"
+					},
+					{
+						"account_type":"master-margin" ,
+						"account_name": "master-margin"
+					},
+					{
+						"account_type":"sub-main" ,
+						"account_name": "fansiyu-main"
+					},
+					{
+						"account_type":"sub-margin" ,
+						"account_name": "fansiyu-margin"
+					},
+					{
+						"account_type":"sub-main" ,
+						"account_name": "tom-main"
+					},
+					{
+						"account_type":"sub-margin" ,
+						"account_name": "tom-margin"
+					}
+				],
+				"default_account": {
+					"xrp": "master-margin"
+				},
+				"threshold": {"xrp": 300},
+				"participating": 1
+			}
+	]
+}

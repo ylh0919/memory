@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "Strike": "70",
+      "put": ["4", "7", "4", "5", "6", "7", "8", "9", "10" ,"11","12","13"],
+      "call": [ "-", "-", "-", "-", "-", "-", "-", "-", "-" ,"-","-","-"]
+    }
+//Table 格式
+    {
+     "Strike":"70",
+     "call_bid_IV": 8, //call、put两者中的一个
+     "call_ask_IV": 6,
+     "put_bid_IV": 3,
+     "put_ask_IV": 6,
+     "fitted_IV": 3
+     }
+//Chart 格式
+  ],
+  "expity_date":"30AUG19",
+  "coin":"BTC",
+  "underlying_price":10000.55,
+  "underlying_index":"SYN.BTC-30AUG19",
+  "Vega":2,
+  "type":"Chart/Table:"
+}

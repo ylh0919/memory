@@ -1,0 +1,689 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Gui Chart</title>
+    <!-- 引入 echarts.js -->
+    <script src="./Echart/Echarts.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./Echart/sockjs.min.js"></script>
+</head>
+<body>
+    <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+    <div id="23AUG" style="width: 750px;height:400px;float:left;"></div>
+    <div id="30AUG" style="width:750px;height:400px;float:right;"></div>
+    <div id="27SEP" style="width: 750px;height:400px;float:left;"></div>
+    <div id="27DEC" style="width: 750px;height:400px;float:right;"></div>
+    <script type="text/javascript">
+        var websocket;
+        var wsUrl = "ws://13.112.226.173:8001/";
+        var chartNum=0;
+        var js_data_23AUG = {};
+        var js_data_30AUG = {};
+        var js_data_27SEP = {};
+        var js_data_27DEC = {};
+        var underlying_index, underlying_price;
+        var title_23AUG, title_30AUG, title_27SEP, title_27DEC;
+        // 基于准备好的dom，初始化echarts实例
+        var Chart_23_AUG = echarts.init(document.getElementById('23AUG'));
+        var Chart_30_AUG = echarts.init(document.getElementById('30AUG'));
+        var Chart_27_SEP = echarts.init(document.getElementById('27SEP'));
+        var Chart_27_DEC = echarts.init(document.getElementById('27DEC'));
+        // 指定图表的配置项和数据
+        
+        window.addEventListener("load", init, false);
+
+        function createChart(js_data, chartNum) {
+            var i = 0;
+            var chart_strike = [], chart_call_bid_IV = [], chart_call_ask_IV = [], chart_put_bid_IV = [], chart_put_ask_IV = [], chart_fitted_IV = [];
+            for (var key in js_data) {
+                chart_strike[i] = key;
+                chart_call_bid_IV[i] = js_data[key].call_bid_IV;
+                chart_call_ask_IV[i] = js_data[key].call_ask_IV;
+                chart_put_bid_IV[i] = js_data[key].put_bid_IV;
+                chart_put_ask_IV[i] = js_data[key].put_ask_IV;
+                chart_fitted_IV[i] = js_data[key].fitted_IV;
+                i++;
+            };
+            
+            if (chartNum == 0){ 
+                var option_23AUG = {
+                title: {
+                    left: 'center',
+                    id: 'main',
+                    show: 'true',
+                    text: title_23AUG
+                },
+                xAxis: {
+                    type: 'category',
+                    data: chart_strike,
+                },
+                yAxis: {
+                    type: 'value'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: "{b}</br>{a0}:{c0}%</br >{a1}:{c1}%</br>{a2}:{c2}%</br>{a3}:{c3}%</br>{a4}:{c4}%</br>",
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                },
+                legend: {
+                    bottom: 10,
+                    left: 'center',
+                    data: ['Call_Ask_IV', 'Call_Bid_IV', 'Put_Bid_IV', 'Put_Ask_IV', 'Fitted_IV']
+                },
+                series: [{
+                    name: 'Call_Ask_IV',
+                    data: chart_call_ask_IV,
+                    type: 'line',
+                    symbol: 'triangle',
+                    symbolSize: 10,
+                    lineStyle: {
+                        normal: {
+                            color: 'blue',
+                            width: 2,
+                            type: 'dotted'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'blue'
+                        }
+                    }
+                },
+                {
+                    name: 'Call_Bid_IV',
+                    data: chart_call_bid_IV,
+                    type: 'line',
+                    symbol: 'triangle',
+                    symbolSize: 10,
+                    lineStyle: {
+                        normal: {
+                            color: 'red',
+                            width: 2,
+                            type: 'dashed'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'red'
+                        }
+                    }
+                },
+                {
+                    name: 'Put_Bid_IV',
+                    data: chart_put_bid_IV,
+                    type: 'line',
+                    symbol: 'emptyCircle',
+                    symbolSize: 10,
+                    lineStyle: {
+                        normal: {
+                            color: 'red',
+                            width: 2,
+                            type: 'dashed'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'red'
+                        }
+                    }
+                },
+                {
+                    name: 'Put_Ask_IV',
+                    data: chart_put_ask_IV,
+                    type: 'line',
+                    symbol: 'emptyCircle',
+                    symbolSize: 10,
+                    lineStyle: {
+                        normal: {
+                            color: 'blue',
+                            width: 2,
+                            type: 'dotted'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'blue'
+                        }
+                    }
+                },
+                {
+                    name: 'Fitted_IV',
+                    data: chart_fitted_IV,
+                    type: 'line',
+                    symbol: 'pin',
+                    symbolSize: 15,
+                    lineStyle: {
+                        normal: {
+                            color: 'green',
+                            width: 2,
+                            type: 'solid'
+                        }
+                    },
+                    itemStyle: {
+                        normal: {
+                            color: 'green'
+                        }
+                    }
+                }
+                ]
+            };
+                Chart_23_AUG.setOption(option_23AUG);
+            }
+            if (chartNum == 1) {
+                var option_30AUG = {
+                    title: {
+                        left: 'center',
+                        id: 'main',
+                        show: 'true',
+                        text: title_30AUG
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: chart_strike
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: "{b}</br>{a0}:{c0}%</br >{a1}:{c1}%</br>{a2}:{c2}%</br>{a3}:{c3}%</br>{a4}:{c4}%</br>",
+                        axisPointer: {
+                            type: 'cross'
+                        },
+                    },
+                    legend: {
+                        bottom: 10,
+                        left: 'center',
+                        data: ['Call_Ask_IV', 'Call_Bid_IV', 'Put_Bid_IV', 'Put_Ask_IV', 'Fitted_IV']
+                    },
+                    series: [{
+                        name: 'Call_Ask_IV',
+                        data: chart_call_ask_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Call_Bid_IV',
+                        data: chart_call_bid_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Bid_IV',
+                        data: chart_put_bid_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Ask_IV',
+                        data: chart_put_ask_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Fitted_IV',
+                        data: chart_fitted_IV,
+                        type: 'line',
+                        symbol: 'pin',
+                        symbolSize: 15,
+                        lineStyle: {
+                            normal: {
+                                color: 'green',
+                                width: 2,
+                                type: 'solid'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'green'
+                            }
+                        }
+                    }
+                    ]
+                };
+                Chart_30_AUG.setOption(option_30AUG);
+            }
+                
+            if (chartNum == 2) {
+                var option_27SEP = {
+                    title: {
+                        left: 'center',
+                        id: 'main',
+                        show: 'true',
+                        text: title_27SEP
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: chart_strike,
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: "{b}</br>{a0}:{c0}%</br >{a1}:{c1}%</br>{a2}:{c2}%</br>{a3}:{c3}%</br>{a4}:{c4}%</br>",
+                        axisPointer: {
+                            type: 'cross'
+                        },
+                    },
+                    legend: {
+                        bottom: 10,
+                        left: 'center',
+                        data: ['Call_Ask_IV', 'Call_Bid_IV', 'Put_Bid_IV', 'Put_Ask_IV', 'Fitted_IV']
+                    },
+                    series: [{
+                        name: 'Call_Ask_IV',
+                        data: chart_call_ask_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Call_Bid_IV',
+                        data: chart_put_bid_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Bid_IV',
+                        data: chart_put_bid_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Ask_IV',
+                        data: chart_put_ask_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Fitted_IV',
+                        data: chart_fitted_IV,
+                        type: 'line',
+                        symbol: 'pin',
+                        symbolSize: 15,
+                        lineStyle: {
+                            normal: {
+                                color: 'green',
+                                width: 2,
+                                type: 'solid'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'green'
+                            }
+                        }
+                    }
+                    ]
+                };
+                Chart_27_SEP.setOption(option_27SEP);
+            }
+                
+            if (chartNum == 3) {
+                var option_27DEC = {
+                    title: {
+                        left: 'center',
+                        id: 'main',
+                        show: 'true',
+                        text: title_27DEC
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: chart_strike
+                    },
+                    yAxis: {
+                        type: 'value'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: "{b}</br>{a0}:{c0}%</br >{a1}:{c1}%</br>{a2}:{c2}%</br>{a3}:{c3}%</br>{a4}:{c4}%</br>",
+                        axisPointer: {
+                            type: 'cross'
+                        },
+                    },
+                    legend: {
+                        bottom: 10,
+                        left: 'center',
+                        data: ['Call_Ask_IV', 'Call_Bid_IV', 'Put_Bid_IV', 'Put_Ask_IV', 'Fitted_IV']
+                    },
+                    series: [{
+                        name: 'Call_Ask_IV',
+                        data: chart_call_ask_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Call_Bid_IV',
+                        data: chart_call_bid_IV,
+                        type: 'line',
+                        symbol: 'triangle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Bid_IV',
+                        data: chart_put_bid_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'red',
+                                width: 2,
+                                type: 'dashed'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'red'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Put_Ask_IV',
+                        data: chart_put_ask_IV,
+                        type: 'line',
+                        symbol: 'emptyCircle',
+                        symbolSize: 10,
+                        lineStyle: {
+                            normal: {
+                                color: 'blue',
+                                width: 2,
+                                type: 'dotted'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'blue'
+                            }
+                        }
+                    },
+                    {
+                        name: 'Fitted_IV',
+                        data: chart_fitted_IV,
+                        type: 'line',
+                        symbol: 'pin',
+                        symbolSize: 15,
+                        lineStyle: {
+                            normal: {
+                                color: 'green',
+                                width: 2,
+                                type: 'solid'
+                            }
+                        },
+                        itemStyle: {
+                            normal: {
+                                color: 'green'
+                            }
+                        }
+                    }
+                    ]
+                };
+                Chart_27_DEC.setOption(option_27DEC);
+            }
+                
+        };
+
+        function createWebsocket() {
+            websocket = new WebSocket(wsUrl);
+            websocket.onopen = function (evt) {
+                writeToScreen("Connected Server :" + wsUrl);
+            };
+            websocket.onmessage = function (evt) {
+				var js = JSON.parse(evt.data);             
+                if (js.type == "Chart") {
+                    underlying_index = js.underlying_index;
+                    underlying_price = js.underlying_price;
+                    if (underlying_index == "SYN.ETH-23AUG19") {
+                        title_23AUG = "Underlying: " + underlying_index + "($" + underlying_price + ")";
+                        if (!js_data_23AUG.hasOwnProperty(js.data[0].Strike)) {
+                            js_data_23AUG[js.data[0].Strike] = {
+                                "call_ask_IV": 0,
+                                "put_ask_IV": 0,
+                                "call_bid_IV": 0,
+                                "put_bid_IV": 0,
+                                "fitted_IV": 0
+                            };
+                        };
+                        js_data_23AUG[js.data[0].Strike].fitted_IV = js.data[0].fitted_IV;
+                        if (js.data[0].hasOwnProperty("call_ask_IV") && js.data[0].hasOwnProperty("call_bid_IV")) {
+                            js_data_23AUG[js.data[0].Strike].call_ask_IV = js.data[0].call_ask_IV;
+                            js_data_23AUG[js.data[0].Strike].call_bid_IV = js.data[0].call_bid_IV;
+                        }
+                        if (js.data[0].hasOwnProperty("put_ask_IV") && js.data[0].hasOwnProperty("put_bid_IV")) {
+                            js_data_23AUG[js.data[0].Strike].put_ask_IV = js.data[0].put_ask_IV;
+                            js_data_23AUG[js.data[0].Strike].put_bid_IV = js.data[0].put_bid_IV;
+                        }
+                        createChart(js_data_23AUG,0);
+                    };
+                    if (underlying_index == "SYN.ETH-30AUG19"){
+                        title_30AUG = "Underlying: " + underlying_index + "($" + underlying_price + ")";
+                        if (!js_data_30AUG.hasOwnProperty(js.data[0].Strike)) {
+                            js_data_30AUG[js.data[0].Strike] = {
+                                "call_ask_IV": 0,
+                                "put_ask_IV": 0,
+                                "call_bid_IV": 0,
+                                "put_bid_IV": 0,
+                                "fitted_IV": 0
+                            };
+                        };
+                        js_data_30AUG[js.data[0].Strike].fitted_IV = js.data[0].fitted_IV;
+                        if (js.data[0].hasOwnProperty("call_ask_IV") && js.data[0].hasOwnProperty("call_bid_IV")) {
+                            js_data_30AUG[js.data[0].Strike].call_ask_IV = js.data[0].call_ask_IV;
+                            js_data_30AUG[js.data[0].Strike].call_bid_IV = js.data[0].call_bid_IV;
+                        }
+                        if (js.data[0].hasOwnProperty("put_ask_IV") && js.data[0].hasOwnProperty("put_bid_IV")) {
+                            js_data_30AUG[js.data[0].Strike].put_ask_IV = js.data[0].put_ask_IV;
+                            js_data_30AUG[js.data[0].Strike].put_bid_IV = js.data[0].put_bid_IV;
+                        }
+                        createChart(js_data_30AUG, 1);
+                    };
+                    if (underlying_index == "ETH-27SEP19"){
+                        title_27SEP = "Underlying: " + underlying_index + "($" + underlying_price + ")";
+                        if (!js_data_27SEP.hasOwnProperty(js.data[0].Strike)) {
+                            js_data_27SEP[js.data[0].Strike] = {
+                                "call_ask_IV": 0,
+                                "put_ask_IV": 0,
+                                "call_bid_IV": 0,
+                                "put_bid_IV": 0,
+                                "fitted_IV": 0
+                            };
+                        };
+                        js_data_27SEP[js.data[0].Strike].fitted_IV = js.data[0].fitted_IV;
+                        if (js.data[0].hasOwnProperty("call_ask_IV") && js.data[0].hasOwnProperty("call_bid_IV")) {
+                            js_data_27SEP[js.data[0].Strike].call_ask_IV = js.data[0].call_ask_IV;
+                            js_data_27SEP[js.data[0].Strike].call_bid_IV = js.data[0].call_bid_IV;
+                        }
+                        if (js.data[0].hasOwnProperty("put_ask_IV") && js.data[0].hasOwnProperty("put_bid_IV")) {
+                            js_data_27SEP[js.data[0].Strike].put_ask_IV = js.data[0].put_ask_IV;
+                            js_data_27SEP[js.data[0].Strike].put_bid_IV = js.data[0].put_bid_IV;
+                        }
+                        createChart(js_data_27SEP, 2);
+                    };
+                    if (underlying_index=="ETH-27DEC19"){
+                        title_27DEC = "Underlying: " + underlying_index + "($" + underlying_price + ")";
+                        if (!js_data_27DEC.hasOwnProperty(js.data[0].Strike)) {
+                            js_data_27DEC[js.data[0].Strike] = {
+                                "call_ask_IV": 0,
+                                "put_ask_IV": 0,
+                                "call_bid_IV": 0,
+                                "put_bid_IV": 0,
+                                "fitted_IV": 0
+                            };
+                        };
+                        js_data_27DEC[js.data[0].Strike].fitted_IV = js.data[0].fitted_IV;
+                        if (js.data[0].hasOwnProperty("call_ask_IV") && js.data[0].hasOwnProperty("call_bid_IV")) {
+                            js_data_27DEC[js.data[0].Strike].call_ask_IV = js.data[0].call_ask_IV;
+                            js_data_27DEC[js.data[0].Strike].call_bid_IV = js.data[0].call_bid_IV;
+                        }
+                        if (js.data[0].hasOwnProperty("put_ask_IV") && js.data[0].hasOwnProperty("put_bid_IV")) {
+                            js_data_27DEC[js.data[0].Strike].put_ask_IV = js.data[0].put_ask_IV;
+                            js_data_27DEC[js.data[0].Strike].put_bid_IV = js.data[0].put_bid_IV;
+                        }
+                        createChart(js_data_27DEC, 3);
+                    };
+                }
+
+            };
+            websocket.onerror = function (evt) {
+                writeToScreen('<span style="color: red;">ERROR:undefined server</span> ');
+                websocket.close();
+            };
+
+            websocket.onclose = function () {
+                writeToScreen('<span style="color: red;">Server Close</span> ');
+            };
+
+        };
+
+        function init() {
+            createWebsocket();
+        };
+
+        function closeWebSocket() {
+            websocket.close();
+        };
+
+
+        function writeToScreen(message) {
+            var pre = document.createElement("p");
+            pre.style.wordWrap = "break-word";
+            pre.innerHTML = message;
+            output.appendChild(pre);
+        };
+
+      
+    </script>
+    <div id="output"></div>
+</body>
+</html>

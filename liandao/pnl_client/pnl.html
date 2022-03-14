@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="./data_table/datatables.min.css" />
+    <link rel="stylesheet" type="text/css" href="./data_table/jquery.dataTables.min.css" />
+    <script type="text/javascript" charset="utf-8" src="./data_table/datatables.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/sockjs.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/jquery-3.3.1.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/config.js"></script>
+    <style type="text/css">
+        .underlying {
+        border-bottom:2px dashed #6b6262;
+        text-align:center;
+        width:100%;
+        }
+        .table_class{
+        text-align:center;
+        }
+        
+        table tr td:nth-child(13) {
+            background-color: #EDF0F1;
+            font-weight:bold;
+        }
+        /*table tr td:nth-child(4) {
+            color: #8CAE1A;
+        }
+        table tr td:nth-child(18) {
+            color: #8CAE1A;
+        }
+        table tr td:nth-child(6) {
+            color: #DE5773;
+        }
+        table tr td:nth-child(20) {
+            color: #DE5773;
+        }*/
+        table th:nth-child(13) {
+            background-color: #EDF0F1;
+            font-weight:bold;
+        }
+    </style>
+
+    <title></title>
+
+</head>
+
+<body>
+   
+        <!--<div id="Underlying" class="underlying">
+                Underlying:($)
+        </div>
+        
+        <div>
+        <div style="float:left"><b>Puts</b></div>
+        <div style="float:right;"><b>Calls</b></div>
+        </div>-->
+        
+        <div id="table" class="table_class">
+            <!--<table id="example" class="display" >
+                <thead></thead>
+                <tbody></tbody>
+            </table>-->
+
+            <script language="javascript" type="text/javascript">
+                /*request = new XMLHttpRequest();
+                request.open('GET','pnl.json');
+                request.responseType = 'text';
+                request.send();
+                request.onload = function(){
+                    document.write(request.response);
+                    j = JSON.parse(request.response);
+                }*/
+                var table_dic = {};
+                var exchange_dic = {};
+                var conf = getConfig();
+                for(i=0; i<conf.strategy_instrument.length; i++){
+                    si = conf.strategy_instrument[i].strategy + "/" + conf.strategy_instrument[i].instrument;
+                    table_dic[si] = i;
+                    //document.write(si);
+                }
+
+                for(i=0; i<conf.strategy_instrument.length; i++){
+                    t1 = document.createElement("table");
+                    t1.id = "time"+i.toString();
+                    t1.align = "center";
+                    document.getElementById("table").appendChild(t1);
+
+                    t = document.createElement("table");
+                    t.id = "example"+i.toString();
+                    t.class = "display";
+                    //document.write(t.id);
+                    document.write("Strategy:"+conf.strategy_instrument[i].strategy+"</br>"+"Instrument:"+conf.strategy_instrument[i].instrument);
+                    document.getElementById("table").appendChild(t);
+                    document.write("</br>");
+
+                }
+
+                for(j=2; j<conf.exchange.length+2; j++){
+                    exchange_dic[conf.exchange[j-2]] = j;
+                }
+
+            </script>  
+        </div>
+
+    <script language="javascript" type="text/javascript">
+        var websocket;
+        var underlying="Underlying----($----)";
+        var index = "SYN.BTC-23AUG19";
+        var time=new Date();
+        document.title = index;
+        var wsUrl = "ws://13.112.235.178:5000/";
+        //var wsUrl = "ws://127.0.0.1:50008";
+        //var table_data = [["Maker Buy Vol", "0", "0", "0", "0", "0"],["Maker Sell Vol", "0", "0", "0", "0", "0"],["Taker Buy Vol", "0", "0", "0", "0", "0"],["Taker Sell Vol", "0", "0", "0", "0", "0"],["Net Pos", "0", "0", "0", "0", "0"],["Maker Fees", "0", "0", "0", "0", "0"],["Taker Fees", "0", "0", "0", "0", "0"],["Ave Maker Buy Px", "0", "0", "0", "0", "0"],["Ave Maker Sell Px", "0", "0", "0", "0", "0"],["Ave Taker Buy Px", "0", "0", "0", "0", "0"],["Ave Taker Sell Px", "0", "0", "0", "0", "0"],["Maker Profit", "0", "0", "0", "0", "0"],["Taker Profit", "0", "0", "0", "0", "0"],["Total Profit", "0", "0", "0", "0", "0"],["Total Profit in USD", "0", "0", "0", "0", "0"],]
+        var exchange_arr = Object.keys(exchange_dic);
+        var total_exchange = exchange_arr.length;//the number of exchange
+        str0 = '["Maker Buy Vol", "0"';str1 = '["Maker Sell Vol", "0"';str2 = '["Taker Buy Vol", "0"';
+        str3 = '["Taker Sell Vol", "0"';str4 = '["Net Pos", "0"';str5 = '["Maker Fees", "0"';
+        str6 = '["Taker Fees", "0"';str7 = '["Ave Maker Buy Px", "0"';str8 = '["Ave Maker Sell Px", "0"';
+        str9 = '["Ave Taker Buy Px", "0"';str10 = '["Ave Taker Sell Px", "0"';str11 = '["Maker Profit", "0"';
+        str12 = '["Taker Profit", "0"';str13 = '["Total Profit", "0"';str14 = '["Total Profit in USD", "0"';
+        add_str = ', \"0\"';
+        for(i=0; i<15; i++){
+            for(j=0; j<total_exchange; j++){
+                //eval('str'+i+'+="'+add_str+'"');
+                eval('str'+i+'=str'+i+'.concat(\', \"0\"\')');
+            }
+            eval('str'+i+'=str'+i+'.concat(\'],\')');
+        }
+        var table_data_str = '[';
+        for(i=0; i<15; i++){
+            eval('table_data_str+=str'+i);
+        }
+        table_data_str += ']';
+        eval('var table_data = ' + table_data_str);
+
+        //eval('var table_data = [["Maker Buy Vol", "0", "0", "0", "0", "0"],["Maker Sell Vol", "0", "0", "0", "0", "0"],["Taker Buy Vol", "0", "0", "0", "0", "0"],["Taker Sell Vol", "0", "0", "0", "0", "0"],["Net Pos", "0", "0", "0", "0", "0"],["Maker Fees", "0", "0", "0", "0", "0"],["Taker Fees", "0", "0", "0", "0", "0"],["Ave Maker Buy Px", "0", "0", "0", "0", "0"],["Ave Maker Sell Px", "0", "0", "0", "0", "0"],["Ave Taker Buy Px", "0", "0", "0", "0", "0"],["Ave Taker Sell Px", "0", "0", "0", "0", "0"],["Maker Profit", "0", "0", "0", "0", "0"],["Taker Profit", "0", "0", "0", "0", "0"],["Total Profit", "0", "0", "0", "0", "0"],["Total Profit in USD", "0", "0", "0", "0", "0"],]')
+        //var js_data = {};
+        //var exchange_dic = {"kucoin":2,"binance":3,"huobi":4,"bequant":5};
+
+        for(i=0; i<conf.strategy_instrument.length; i++){
+            var example = '#example'+i.toString();
+            //document.write(table_dic["aa/eth_btc"]);
+            //var command = '= $(example).DataTable({data: table_data,columns: [{ title: "Exchange" }, { title: "Global" }, { title: "Kucoin" }, { title: "Binance" }],"paging": false,"ordering": false,"searching": false,"info":false,})';
+            var command = '= $(example).DataTable({data: table_data,columns: [{ title: "Exchange" }, { title: "Global" }, ';
+            for(j=0; j<exchange_arr.length; j++){
+                command = command + '{ title: "' + exchange_arr[j] + '" }, ';
+            }
+            command += '],"paging": false,"ordering": false,"searching": false,"info":false,})';
+            eval('var table'+i.toString()+command);
+
+            //var command2 = '= [["Maker Buy Vol", "0", "0", "0", "0", "0"],["Maker Sell Vol", "0", "0", "0", "0", "0"],["Taker Buy Vol", "0", "0", "0", "0", "0"],["Taker Sell Vol", "0", "0", "0", "0", "0"],["Net Pos", "0", "0", "0", "0", "0"],["Maker Fees", "0", "0", "0", "0", "0"],["Taker Fees", "0", "0", "0", "0", "0"],["Ave Maker Buy Px", "0", "0", "0", "0", "0"],["Ave Maker Sell Px", "0", "0", "0", "0", "0"],["Ave Taker Buy Px", "0", "0", "0", "0", "0"],["Ave Taker Sell Px", "0", "0", "0", "0", "0"],["Maker Profit", "0", "0", "0", "0", "0"],["Taker Profit", "0", "0", "0", "0", "0"],["Total Profit", "0", "0", "0", "0", "0"],["Total Profit in USD", "0", "0", "0", "0", "0"],]';
+            //var command2 = 'table_data'; 
+            //eval('var table_data'+i.toString()+command2);  
+            eval('var table_data'+i.toString()+'='+table_data_str);
+        }
+
+        function createDataTable(js) {
+            /*var i = 0;
+            table_data = [];
+            for (var key in js_data) {
+                table_data[i] = ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"];
+                table_data[i][12] = key;
+                table_data[i][25] = js_data[key].Vega;
+                for (var j=0; j < 12; j++) {
+                    table_data[i][j] = js_data[key].put[j];
+                    table_data[i][j + 13] = js_data[key].call[j];
+                } 
+                i++;
+            }
+            table.clear();*/
+            var key = js.strategy + "/" + js.instrument;
+            var i = table_dic[key];//table num
+
+            //table_data0[0][1] = js.data[0].maker_buy_vol;
+            eval('table_data'+i+'[0][1] = js.data[0].maker_buy_vol');
+            eval('table_data'+i+'[1][1] = js.data[0].maker_sell_vol');
+            eval('table_data'+i+'[2][1] = js.data[0].taker_buy_vol');
+            eval('table_data'+i+'[3][1] = js.data[0].taker_sell_vol');
+            eval('table_data'+i+'[4][1] = js.data[0].net_pos');
+            eval('table_data'+i+'[5][1] = js.data[0].maker_fees');
+            eval('table_data'+i+'[6][1] = js.data[0].taker_fees');
+            eval('table_data'+i+'[7][1] = js.data[0].ave_maker_buy_px');
+            eval('table_data'+i+'[8][1] = js.data[0].ave_maker_sell_px');
+            eval('table_data'+i+'[9][1] = js.data[0].ave_taker_buy_px');
+            eval('table_data'+i+'[10][1] = js.data[0].ave_taker_sell_px');
+            eval('table_data'+i+'[11][1] = js.data[0].maker_profit');
+            eval('table_data'+i+'[12][1] = js.data[0].taker_profit');
+            eval('table_data'+i+'[13][1] = js.data[0].total_profit');
+            eval('table_data'+i+'[14][1] = js.data[0].total_profit_usd');
+
+            /*table_data0[1][1] = js.data[0].maker_sell_vol;
+            table_data0[2][1] = js.data[0].taker_buy_vol;
+            table_data0[3][1] = js.data[0].taker_sell_vol;
+            table_data0[4][1] = js.data[0].net_pos;
+            table_data0[5][1] = js.data[0].maker_fees;
+            table_data0[6][1] = js.data[0].taker_fees;
+            table_data0[7][1] = js.data[0].ave_maker_buy_px;
+            table_data0[8][1] = js.data[0].ave_maker_sell_px;
+            table_data0[9][1] = js.data[0].ave_taker_buy_px;
+            table_data0[10][1] = js.data[0].ave_taker_sell_px;
+            table_data0[11][1] = js.data[0].maker_profit;
+            table_data0[12][1] = js.data[0].taker_profit;
+            table_data0[13][1] = js.data[0].total_profit;
+            table_data0[14][1] = js.data[0].total_profit_usd;*/
+
+            var exchange_num = exchange_dic[js.data[1].exchange];
+
+            //table_data0[0][exchange_num] = js.data[1].maker_buy_vol;
+            eval('table_data'+i+'[0][exchange_num] = js.data[1].maker_buy_vol');
+            eval('table_data'+i+'[1][exchange_num] = js.data[1].maker_sell_vol');
+            eval('table_data'+i+'[2][exchange_num] = js.data[1].taker_buy_vol');
+            eval('table_data'+i+'[3][exchange_num] = js.data[1].taker_sell_vol');
+            eval('table_data'+i+'[4][exchange_num] = js.data[1].net_pos');
+            eval('table_data'+i+'[5][exchange_num] = js.data[1].maker_fees');
+            eval('table_data'+i+'[6][exchange_num] = js.data[1].taker_fees');
+            eval('table_data'+i+'[7][exchange_num] = js.data[1].ave_maker_buy_px');
+            eval('table_data'+i+'[8][exchange_num] = js.data[1].ave_maker_sell_px');
+            eval('table_data'+i+'[9][exchange_num] = js.data[1].ave_taker_buy_px');
+            eval('table_data'+i+'[10][exchange_num] = js.data[1].ave_taker_sell_px');
+            eval('table_data'+i+'[11][exchange_num] = js.data[1].maker_profit');
+            eval('table_data'+i+'[12][exchange_num] = js.data[1].taker_profit');
+            eval('table_data'+i+'[13][exchange_num] = js.data[1].total_profit');
+            eval('table_data'+i+'[14][exchange_num] = js.data[1].total_profit_usd');
+            /*table_data0[1][exchange_num] = js.data[1].maker_sell_vol;
+            table_data0[2][exchange_num] = js.data[1].taker_buy_vol;
+            table_data0[3][exchange_num] = js.data[1].taker_sell_vol;
+            table_data0[4][exchange_num] = js.data[1].net_pos;
+            table_data0[5][exchange_num] = js.data[1].maker_fees;
+            table_data0[6][exchange_num] = js.data[1].taker_fees;
+            table_data0[7][exchange_num] = js.data[1].ave_maker_buy_px;
+            table_data0[8][exchange_num] = js.data[1].ave_maker_sell_px;
+            table_data0[9][exchange_num] = js.data[1].ave_taker_buy_px;
+            table_data0[10][exchange_num] = js.data[1].ave_taker_sell_px;
+            table_data0[11][exchange_num] = js.data[1].maker_profit;
+            table_data0[12][exchange_num] = js.data[1].taker_profit;
+            table_data0[13][exchange_num] = js.data[1].total_profit;
+            table_data0[14][exchange_num] = js.data[1].total_profit_usd;*/           
+
+            eval('table'+i+'.clear()');
+            eval('table'+i+'.rows.add(table_data'+i+').draw()');
+            /*table0.clear();
+            table0.rows.add(table_data0).draw();*/
+            //document.getElementById("time0").innerHTML = "Start Time:" + obj.start_time;
+            eval('document.getElementById("time'+i+'").innerHTML = "Start Time:" + js.start_time');
+        };
+
+        function createWebsocket() {
+            websocket = new WebSocket(wsUrl);
+            websocket.onopen = function (evt) {
+                writeToScreen("Connected Server :"+wsUrl);
+            };
+            websocket.onmessage = function (evt) {
+                var js = JSON.parse(evt.data);
+                /*if (js.underlying_index == index&&js.type=="Table") {
+                    if (!js_data.hasOwnProperty(js.data[0].Strike)) {
+                        js_data[js.data[0].Strike] = {
+                            "call": ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+                            "put": ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+                            "Vega":0
+                        };
+                    }
+                    js_data[js.data[0].Strike].Vega = js.vega;
+                    if (js.data[0].put[0] == "-") {
+                        js_data[js.data[0].Strike].call = js.data[0].call;
+                    }
+                    if (js.data[0].call[0] == "-") {
+                        js_data[js.data[0].Strike].put = js.data[0].put;
+                    }
+                    underlying = "Underlying: " + js.underlying_index + "($" + js.underlying_price + ")";
+                    document.getElementById("Underlying").innerHTML = underlying;*/
+                    createDataTable(js);
+                //}
+                
+            };
+            websocket.onerror = function (evt) {
+                    writeToScreen('<span style="color: red;">ERROR:undefined server</span> ');
+                    /*var text = '{'+
+                        '"instrument":"btc_usdt",'+
+                        '"strategy":"aa",'+
+                        '"start_time":"10:00",'+
+                        '"data":['+
+                            '{'+
+                                '"exchange":"global",'+
+                                '"maker_buy_vol":"1",'+
+                                '"maker_sell_vol":"1",'+
+                                '"taker_buy_vol":"1",'+
+                                '"taker_sell_vol":"1",'+
+                                '"net_pos":"1",'+
+                                '"maker_fees":"1",'+
+                                '"taker_fees":"1",'+
+                                '"ave_maker_buy_px":"1",'+
+                                '"ave_maker_sell_px":"1",'+
+                                '"ave_taker_buy_px":"1",'+
+                                '"ave_taker_sell_px":"1",'+
+                                '"maker_profit":"1",'+
+                                '"taker_profit":"1",'+
+                                '"total_profit":"1",'+
+                                '"total_profit_usd":"1"'+
+                            '},'+
+                            '{'+
+                                '"exchange":"binance",'+
+                                '"maker_buy_vol":"1",'+
+                                '"maker_sell_vol":"1",'+
+                                '"taker_buy_vol":"1",'+
+                                '"taker_sell_vol":"1",'+
+                                '"net_pos":"1",'+
+                                '"maker_fees":"1",'+
+                                '"taker_fees":"1",'+
+                                '"ave_maker_buy_px":"1",'+
+                                '"ave_maker_sell_px":"1",'+
+                                '"ave_taker_buy_px":"1",'+
+                                '"ave_taker_sell_px":"1",'+
+                                '"maker_profit":"1",'+
+                                '"taker_profit":"1",'+
+                                '"total_profit":"1",'+
+                                '"total_profit_usd":"1"'+
+                            '}'+
+                        ']'+
+                    '}';
+                    obj = JSON.parse(text);
+                    createDataTable(obj);*/
+                    //document.getElementById("time0").innerHTML = "Start Time:" + obj.start_time;
+
+                    websocket.close();
+            };
+
+            websocket.onclose = function () {
+                    writeToScreen('<span style="color: red;">Server Close</span> ');
+            };
+               
+        };
+
+        function init() {
+                //writeToScreen("init");
+                //read_json();
+                createWebsocket();
+        };
+
+        /*function read_json() {
+            writeToScreen("read_json");
+            var request = new XMLHttpRequest();
+            request.open("get","pnl.json");
+            request.send(null);
+            request.onload = function(){
+                writeToScreen(request.status);
+                if(request.status==200){
+                    var json = JSON.parse(request.responseText);
+                    writeToScreen(request.responseText);
+                }
+            }
+        };*/
+
+        function closeWebSocket() {
+                websocket.close();
+        };
+
+
+        function writeToScreen(message) {
+                var pre = document.createElement("p");
+                pre.style.wordWrap = "break-word";
+                pre.innerHTML = message;
+                output.appendChild(pre);
+        };
+
+        window.addEventListener("load", init, false);
+
+    </script>    
+        <div id="output"></div>
+</body>
+</html>

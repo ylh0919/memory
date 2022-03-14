@@ -1,0 +1,174 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="./data_table/datatables.min.css" />
+    <link rel="stylesheet" type="text/css" href="./data_table/jquery.dataTables.min.css" />
+    <script type="text/javascript" charset="utf-8" src="./data_table/datatables.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/sockjs.min.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/jquery-3.3.1.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./data_table/jquery.dataTables.min.js"></script>
+    <style type="text/css">
+        .underlying {
+        border-bottom:2px dashed #6b6262;
+        text-align:center;
+        width:100%;
+        }
+        .table_class{
+        text-align:center;
+        }
+		
+        table tr td:nth-child(13) {
+            background-color: #EDF0F1;
+			font-weight:bold;
+        }
+        table tr td:nth-child(4) {
+            color: #8CAE1A;
+        }
+        table tr td:nth-child(18) {
+            color: #8CAE1A;
+        }
+        table tr td:nth-child(6) {
+            color: #DE5773;
+        }
+        table tr td:nth-child(20) {
+            color: #DE5773;
+        }
+        table th:nth-child(13) {
+            background-color: #EDF0F1;
+			font-weight:bold;
+        }
+    </style>
+
+    <title></title>
+
+</head>
+
+<body>
+   
+        <div id="Underlying" class="underlying">
+                Underlying:($)
+        </div>
+		
+		<div>
+		<div style="float:left"><b>Puts</b></div>
+		<div style="float:right;"><b>Calls</b></div>
+		</div>
+		
+        <div id="table" class="table_class">
+            <table id="example" class="display" >
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+    <script language="javascript" type="text/javascript">
+        var websocket;
+        var underlying="Underlying----($----)";
+        var index = "BTC-27SEP19";
+		var time=new Date();
+        document.title = index;
+        var wsUrl = "ws://13.112.226.173:8001/";
+        //var wsUrl = "ws://127.0.0.1:50008";
+        var table_data = [
+            ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18","19","20","21","22","23","24","25"],
+            ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "110", "111", "112", "113", "114", "115", "116", "117", "118","119","120","121","122","123","124","125"],
+        ]
+
+        var js_data = {};
+
+        var table = $('#example').DataTable({
+            data: table_data,
+            columns: [
+                { title: "Last" }, { title: "Size" }, { title: "IV" }, { title: "Bid" }, { title: "Mark" },
+                { title: "Ask" }, { title: "IV" }, { title: "Size" }, { title: "Vol" }, { title: "Open" }, { title: "Δ|Delta" }, { title: "Pos" },
+                { title: "Strike" },
+                { title: "Pos" },{ title: "Last" }, { title: "Size" }, { title: "IV" }, { title: "Bid" }, { title: "Mark" },
+                { title: "Ask" }, { title: "IV" }, { title: "Size" }, { title: "Vol" }, { title: "Open" }, { title: "Δ|Delta" },
+                { title:"Vega" }
+            ],
+            "dom": '<"top"i>rt<"bottom"flp><"clear">',
+            "paging": false,
+            "ordering": false,
+            "searching": false,
+			"info":false,
+        });
+
+        function createDataTable(js_data) {
+            var i = 0;
+            table_data = [];
+            for (var key in js_data) {
+                table_data[i] = ["0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"];
+                table_data[i][12] = key;
+                table_data[i][25] = js_data[key].Vega;
+                for (var j=0; j < 12; j++) {
+                    table_data[i][j] = js_data[key].put[j];
+                    table_data[i][j + 13] = js_data[key].call[j];
+                } 
+                i++;
+            }
+            table.clear();
+            table.rows.add(table_data).draw();
+        };
+
+        function createWebsocket() {
+            websocket = new WebSocket(wsUrl);
+            websocket.onopen = function (evt) {
+                writeToScreen("Connected Server :"+wsUrl);
+            };
+            websocket.onmessage = function (evt) {
+                var js = JSON.parse(evt.data);
+                if (js.underlying_index == index&&js.type=="Table") {
+                    if (!js_data.hasOwnProperty(js.data[0].Strike)) {
+                        js_data[js.data[0].Strike] = {
+                            "call": ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+                            "put": ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+                            "Vega":0
+                        };
+                    }
+                    js_data[js.data[0].Strike].Vega = js.vega;
+                    if (js.data[0].put[0] == "-") {
+                        js_data[js.data[0].Strike].call = js.data[0].call;
+                    }
+                    if (js.data[0].call[0] == "-") {
+                        js_data[js.data[0].Strike].put = js.data[0].put;
+                    }
+                    underlying = "Underlying: " + js.underlying_index + "($" + js.underlying_price + ")";
+                    document.getElementById("Underlying").innerHTML = underlying;
+                    createDataTable(js_data);
+                }
+                
+            };
+            websocket.onerror = function (evt) {
+                    writeToScreen('<span style="color: red;">ERROR:undefined server</span> ');
+                    websocket.close();
+            };
+
+            websocket.onclose = function () {
+                    writeToScreen('<span style="color: red;">Server Close</span> ');
+            };
+               
+        };
+
+        function init() {
+                createWebsocket();
+        };
+
+        function closeWebSocket() {
+                websocket.close();
+        };
+
+
+        function writeToScreen(message) {
+                var pre = document.createElement("p");
+                pre.style.wordWrap = "break-word";
+                pre.innerHTML = message;
+                output.appendChild(pre);
+        };
+
+        window.addEventListener("load", init, false);
+
+    </script>    
+        <div id="output"></div>
+</body>
+</html>

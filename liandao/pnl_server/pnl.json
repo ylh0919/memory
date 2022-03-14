@@ -1,0 +1,32 @@
+{
+	"rate":{
+		"kucoin":{
+			"maker_fee_rate": 0.1,
+			"taker_fee_rate": 0.1
+		},
+		"binance":{
+			"maker_fee_rate": 0.1,
+			"taker_fee_rate": 0.1
+		},
+		"huobi":{
+			"maker_fee_rate": 0.1,
+			"taker_fee_rate": 0.1
+		},
+		"bequant":{
+			"maker_fee_rate": 0.1,
+			"taker_fee_rate": 0.1
+		}
+	},
+	"strategy_instrument":[
+		{
+			"strategy":"aa",
+			"instrument":"eth_btc",
+			"quote_currency":"btc"
+		},
+		{
+			"strategy":"aa",
+			"instrument":"btc_usdt",
+			"quote_currency":"usdt"			
+		}
+	]
+}

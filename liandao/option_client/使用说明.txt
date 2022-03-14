@@ -1,0 +1,7 @@
+打开web_server_demo 运行py 脚本 启动服务端
+
+会每5秒发送message.txt给web
+
+wsUrl:ws://127.0.0.1:50008（连接服务端，需要换成服务端的wsUrl）
+
+打开option_client 可以看到数据表

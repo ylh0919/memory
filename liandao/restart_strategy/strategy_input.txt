@@ -1,0 +1,2 @@
+master /auto/fgl/md_strat/config/config_coinflex.json /auto/fgl/md_strat/config/parameters_coinflex_btc_usdt.json mockkucoin btc_usdt
+test /auto/fgl/md_strat/config/config_coinflex.json /auto/fgl/md_strat/config/parameters_coinflex_btc_usdt.json mockkucoin btc_usdt

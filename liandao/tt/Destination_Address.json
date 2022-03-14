@@ -1,0 +1,34 @@
+{
+  "destination_address": [
+    {
+      "exchange": "Kucoin",
+      "account_name": "sf_beavo",
+      "source": 32,
+      "WithdrawWhiteLists": {
+        "btc": [
+          "375e6Hz5PEoC4AFZEq16a8naM9mKUDyDRS",
+          ""
+        ],
+        "xrp": [
+          "rUW9toSjQkLY6EspdnBJP2paG4hWKmNbMh",
+          "1862094677"
+        ]
+      }
+    },
+    {
+      "exchange": "Binance",
+      "account_name": "sf_beavo",
+      "source": 16,
+      "WithdrawWhiteLists": {
+        "btc": [
+          "1Poej9FX4pKQF9Le1ysJgPYdcBkED7wdkC",
+          ""
+        ],
+        "xrp": [
+          "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh",
+          "104398738"
+        ]
+      }
+    }
+  ]
+}

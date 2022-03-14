@@ -1,0 +1,40 @@
+# Copyright [2017] [taurus.ai]
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+CMAKE_MINIMUM_REQUIRED(VERSION 3.7)
+PROJECT(wingchun)
+
+############################################################
+
+INCLUDE_DIRECTORIES(../longfist)
+INCLUDE_DIRECTORIES(../longfist/api/ctp/v6.3.15_20190220/include)
+INCLUDE_DIRECTORIES(../longfist/api/qdp/Qdp2.1.9_api_Linux_7.2_20200818/include)
+INCLUDE_DIRECTORIES(../longfist/api/xtp/XTP_API_20171115_1.1.16.9/include)
+
+INCLUDE_DIRECTORIES(../yijinjing/journal)
+INCLUDE_DIRECTORIES(../yijinjing/log)
+INCLUDE_DIRECTORIES(../yijinjing/paged)
+INCLUDE_DIRECTORIES(../yijinjing/utils)
+INCLUDE_DIRECTORIES(../monitor)
+
+INCLUDE_DIRECTORIES(base)
+INCLUDE_DIRECTORIES(../utils/libecp/include/libecp)
+
+LINK_DIRECTORIES(../yijinjing)
+LINK_DIRECTORIES(../monitor)
+
+ADD_SUBDIRECTORY(md)
+ADD_SUBDIRECTORY(td)
+ADD_SUBDIRECTORY(strategy)
+ADD_SUBDIRECTORY(tool)
